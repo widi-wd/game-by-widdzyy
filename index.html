@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAME BY WIDDZYY</title>
+
+  <!-- SweetAlert2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Font Awesome CDN for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #1f1f1f;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .game-container {
+      margin: 20px auto;
+      max-width: 360px;
+      flex-grow: 1; /* Biarkan kontainer permainan fleksibel */
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #27e7ec, #f76a8c, #f8b400, #27e7ec);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 3s infinite;
+    }
+
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background-color: #27e7ec;
+      color: #1f1f1f;
+      border: 2px solid white;
+      font-size: 36px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .cell i {
+      font-size: 36px;
+    }
+
+    .cell:hover {
+      background-color: #1f1f1f;
+      color: #27e7ec;
+      transform: scale(1.1);
+    }
+
+    .cell.disabled {
+      cursor: not-allowed;
+    }
+
+    #status {
+      margin: 20px 0;
+      font-size: 18px;
+    }
+
+    #reset, #redeem {
+      padding: 15px 0;
+      font-size: 16px;
+      background-color: #f76a8c;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      width: 340px; /* Lebar tombol sejajar dengan grid */
+      margin: 0 auto;
+      display: block;
+    }
+
+    #reset:hover {
+      background-color: #f8b400;
+    }
+
+    #redeem {
+      border: 2px solid white; /* Garis putih */
+      background-color: transparent; /* Latar belakang transparan */
+      color: white; /* Warna teks putih */
+      margin-top: 20px; /* Tambahkan margin atas untuk jarak */
+    }
+
+    #redeem:hover {
+      background-color: rgba(255, 255, 255, 0.1); /* Efek hover */
+    }
+
+    /* Footer */
+    footer {
+      background-color: #111;
+      color: #fff;
+      padding: 10px 0;
+      text-align: center;
+      font-size: 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    footer a {
+      color: #27e7ec;
+      text-decoration: none;
+      font-size: 18px;
+    }
+
+    footer a:hover {
+      color: #f8b400;
+    }
+
+    footer i {
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>GAME BERHADIAH</h1>
+    <div class="board" id="board"></div>
+    <p id="status"></p>
+    <button id="reset">Restart Game</button>
+    <button id="redeem">Redeem Kode</button> <!-- Tombol redeem -->
+  </div>
+
+  <footer>
+    <a href="https://t.me/widdzyy" target="_blank">
+      <i class="fab fa-telegram-plane"></i>
+    </a>
+    <span>© 2025 Reseller Widdzyy | All Right Reserved</span>
+  </footer>
+
+  <script>
+    const board = document.getElementById('board');
+    const statusText = document.getElementById('status');
+    const resetButton = document.getElementById('reset');
+    const redeemButton = document.getElementById('redeem');
+    const cells = Array(9).fill(null);
+    let currentPlayer = 'X';
+    let level = 1;
+
+    const icons = {
+      X: '<i class="fas fa-times"></i>',
+      O: '<i class="far fa-circle"></i>'
+    };
+
+    function showGameInfo() {
+      Swal.fire({
+        title: 'Selamat Datang di Game Berhadiah by reseller widdzyy!',
+        html: `
+          <p>Founder: Widdzyy</p>
+          <p>Cara Bermain: Mainkan permainan ini dengan mengklik kotak untuk menandai 'X'.dan AI akan bermain sebagai 'O'. Menangkan permainan untuk naik ke level lebih tinggi !</p>
+          <p>Hadiah: Selesaikan semua 5 level untuk mendapatkan kode redeem yang bisa ditukar dengan hadiah menarik!</p>
+        `,
+        icon: 'info',
+        confirmButtonText: 'Mulai Permainan'
+      }).then(() => {
+        initBoard();
+      });
+    }
+
+    function initBoard() {
+      board.innerHTML = '';
+      cells.fill(null);
+      currentPlayer = 'X';
+      statusText.textContent = `Level ${level}: Player X's turn`;
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        cell.addEventListener('click', handlePlayerMove);
+        board.appendChild(cell);
+      }
+    }
+
+    function handlePlayerMove(event) {
+      const index = event.target.dataset.index;
+      if (!cells[index] && currentPlayer === 'X') {
+        cells[index] = 'X';
+        event.target.innerHTML = icons['X'];
+        event.target.classList.add('disabled');
+        if (checkWin('X')) {
+          Swal.fire({
+            title: 'You Win!',
+            text: `ayo lanjut ke level selanjutnya${level}!`,
+            icon: 'success',
+            confirmButtonText: 'Next Level'
+          }).then(() => nextLevel());
+          return;
+        }
+        if (isDraw()) {
+          Swal.fire({
+            title: 'It\'s a Draw!',
+            icon: 'info',
+            confirmButtonText: 'Try Again'
+          }).then(() => initBoard());
+          return;
+        }
+        currentPlayer = 'O';
+        statusText.textContent = `Level ${level}: Player O's turn`;
+        setTimeout(aiMove, 500);
+      }
+    }
+
+    function aiMove() {
+      let move;
+      if (level === 1) {
+        move = getRandomMove();
+      } else if (level === 2 || level === 3) {
+        move = getOptimalMove('O') || getRandomMove();
+      } else if (level === 4) {
+        move = getOptimalMove('O') || getOptimalMove('X') || getRandomMove();
+      } else if (level === 5) {
+        move = getOptimalMove('O') || getOptimalMove('X') || getRandomMove();
+      }
+
+      if (move !== undefined) {
+        cells[move] = 'O';
+        const cellElement = document.querySelector(`.cell[data-index='${move}']`);
+        cellElement.innerHTML = icons['O'];
+        cellElement.classList.add('disabled');
+        if (checkWin('O')) {
+          Swal.fire({
+            title: 'You Lose!',
+            text: `Ai telah menang${level}! Restarting from Level 1.`,
+            icon: 'error',
+            confirmButtonText: 'OK'
+          }).then(() => resetGame(true));
+          return;
+        }
+        if (isDraw()) {
+          Swal.fire({
+            title: 'It\'s a Draw!',
+            icon: 'info',
+            confirmButtonText: 'Try Again'
+          }).then(() => initBoard());
+          return;
+        }
+        currentPlayer = 'X';
+        statusText.textContent = `Level ${level}: Player X's turn`;
+      }
+    }
+
+    function nextLevel() {
+      if (level === 5) {
+        Swal.fire({
+          title: 'Congratulations!',
+          text: 'yeah, kamu telah menang gunakan kode readem ini [ #widdzyy paling ganteng ] untuk mengklaim hadiahmu !',
+          icon: 'info',
+          confirmButtonText: 'OK'
+        });
+      }
+      level = Math.min(5, level + 1);
+      initBoard();
+    }
+
+    function resetGame(restart = false) {
+      if (restart) level = 1;
+      initBoard();
+    }
+
+    function checkWin(player) {
+      const winPatterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+      ];
+      return winPatterns.some(pattern =>
+        pattern.every(index => cells[index] === player)
+      );
+    }
+
+    function isDraw() {
+      return cells.every(cell => cell !== null);
+    }
+
+    function getRandomMove() {
+      const emptyIndices = cells.map((cell, index) => cell === null ? index : null).filter(index => index !== null);
+      return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    }
+
+    function getOptimalMove(player) {
+      const opponent = player === 'X' ? 'O' : 'X';
+      return findWinningMove(player) || findWinningMove(opponent);
+    }
+
+    function findWinningMove(player) {
+      const winPatterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+      ];
+      for (const pattern of winPatterns) {
+        const moves = pattern.filter(index => cells[index] === player);
+        const empty = pattern.filter(index => cells[index] === null);
+        if (moves.length === 2 && empty.length === 1) return empty[0];
+      }
+      return null;
+    }
+
+    resetButton.addEventListener('click', () => {
+      Swal.fire({
+        title: 'Restart Game?',
+        text: 'Are you sure you want to restart?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes',
+        cancelButtonText: 'No'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          resetGame(true);
+        }
+      });
+    });
+
+    redeemButton.addEventListener('click', () => {
+      Swal.fire({
+        title: 'Masukkan Kode Redeem',
+        input: 'text',
+        inputPlaceholder: 'Masukkan kode di sini',
+        showCancelButton: true,
+        confirmButtonText: 'Redeem',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const code = result.value;
+          if (code === 'widdzyy paling ganteng') {
+            Swal.fire({
+              title: 'Berhasil!',
+              text: 'selamat anda mendapatkan viu 1 tahun Email: goofykowalevski953@widdzyy.com Password: widdzyyganteng#111 !',
+              icon: 'success',
+              confirmButtonText: 'OK'
+            });
+          } else {
+            Swal.fire({
+              title: 'Gagal!',
+              text: 'Kode yang Anda masukkan salah. Silakan coba lagi.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+          }
+        }
+      });
+    });
+
+    window.onload = showGameInfo; // Show game info on load
+  </script>
+</body>
+</html>
